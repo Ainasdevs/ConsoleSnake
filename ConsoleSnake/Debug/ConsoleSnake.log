@@ -1,0 +1,5 @@
+﻿  Game.cpp
+D:\Development\ConsoleSnake\ConsoleSnake\Game.cpp(174,20): warning C4018:  '<': signed/unsigned mismatch
+D:\Development\ConsoleSnake\ConsoleSnake\Game.cpp(236,20): warning C4018:  '<': signed/unsigned mismatch
+D:\Development\ConsoleSnake\ConsoleSnake\Game.cpp(243,12): warning C4244:  'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+  ConsoleSnake.vcxproj -> D:\Development\ConsoleSnake\Debug\ConsoleSnake.exe
