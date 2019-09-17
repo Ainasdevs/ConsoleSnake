@@ -5,8 +5,7 @@
 #include <ctime>
 #include <chrono>
 #include <deque>
-
-#define TICKS_PER_SECOND 10
+#include <cstdio>
 
 bool GameSetup();
 void GameUpdate(float);
@@ -61,18 +60,23 @@ SnakeHead snake;
 Apple apple; // Maybe make instances in a place that makes sense and not global vars ?
 bool debug = true;
 
+constexpr unsigned short def_tickrate = 20;
+unsigned short tickrate = def_tickrate;
+
 int main(int argc, char* argv[]) {
+    puts("Set up CONSOLE and press ENTER to begin.");
+    getchar();
 	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	hScreenBuffer = CreateFileA("CONOUT$", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hConsole == INVALID_HANDLE_VALUE || hScreenBuffer == INVALID_HANDLE_VALUE) { return EXIT_FAILURE; } // WE DONT HAVE A CONSOLE ?
 
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	if (!GetConsoleScreenBufferInfo(hScreenBuffer, &csbi)) {
-		printf("Could not get console screen buffer info; Error: 0x%X\n", GetLastError());
+		printf("Could not get console screen buffer info; Error: 0x%X\n", (unsigned int)GetLastError());
 		return EXIT_FAILURE;
 	}
 	cCon.X = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-	cCon.Y = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+	cCon.Y = csbi.srWindow.Bottom - csbi.srWindow.Top;
 	cPixelBuffer = new char[cCon.X * cCon.Y];
 
 	for (int i = 0; i < cCon.X * cCon.Y; ++i) {
@@ -121,13 +125,13 @@ void GameUpdate(float fDelta) {
 	static float fTickIncrementer = 0;
 	fSecondCounter += fDelta;
 	fTickIncrementer += fDelta;
-	std::string sTitle = "FPS: " + std::to_string(1 / fDelta);
+	std::string sTitle = "Snake";
 	SetConsoleTitleA(sTitle.c_str());
 
 	GamePlayspaceClear();
 
 	snake.input();
-	if ((fTickIncrementer * 1000) > 1000/TICKS_PER_SECOND) {
+	if ((fTickIncrementer * 1000) > 1000/tickrate) {
 		fTickIncrementer = 0;
 		snake.move();
 	}
@@ -171,7 +175,7 @@ inline int TranslateCoord(SHORT X, SHORT Y) {
 
 void SnakeHead::display() {
 	cPixelBuffer[TranslateCoord(x, y)] = char(254);
-	for (int i = 0; i < tail.size(); ++i) {
+	for (int i = 0; i < (int)tail.size(); ++i) {
 		cPixelBuffer[TranslateCoord(tail[i].x, tail[i].y)] = tail[i].bSideways ? char(254) : char(219);
 	}
 }
@@ -182,15 +186,19 @@ void SnakeHead::move() {
 	snake.pdir = dir;
 	switch (snake.dir) {
 	case SnakeDir::FORWARD:
+	    tickrate = def_tickrate/2;
 		--y;
 		break;
 	case SnakeDir::BACKWARD:
+	    tickrate = def_tickrate/2;
 		++y;
 		break;
 	case SnakeDir::LEFT:
+	    tickrate = def_tickrate;
 		--x;
 		break;
 	case SnakeDir::RIGHT:
+	    tickrate = def_tickrate;
 		++x;
 		break;
 	}
@@ -209,10 +217,10 @@ void SnakeHead::move() {
 }
 
 void SnakeHead::input() {
-	if (bInput[0]) { snake.dir = SnakeDir::FORWARD; }
-	if (bInput[1]) { snake.dir = SnakeDir::LEFT; }
-	if (bInput[2]) { snake.dir = SnakeDir::BACKWARD; }
-	if (bInput[3]) { snake.dir = SnakeDir::RIGHT; }
+	if (bInput[0]) { snake.dir = snake.dir != SnakeDir::BACKWARD ? SnakeDir::FORWARD : snake.dir; }
+	if (bInput[1]) { snake.dir = snake.dir != SnakeDir::RIGHT ? SnakeDir::LEFT : snake.dir; }
+	if (bInput[2]) { snake.dir = snake.dir != SnakeDir::FORWARD ? ::BACKWARD : snake.dir; }
+	if (bInput[3]) { snake.dir = snake.dir != SnakeDir::LEFT ? SnakeDir::RIGHT : snake.dir; }
 }
 
 void SnakeHead::eat() {
@@ -233,7 +241,7 @@ bool SnakeHead::pixelIsSnakeHead(int x, int y) {
 }
 
 bool SnakeHead::pixelIsSnakeBody(int x, int y) {
-	for (int i = 0; i < this->tail.size(); ++i) {
+	for (int i = 0; i < (int)this->tail.size(); ++i) {
 		if (this->tail[i].x == x && this->tail[i].y == y) { return true; }
 	}
 	return false;
@@ -243,7 +251,7 @@ void Apple::put() {
 	srand(time(NULL));
 	do {
 		x = (rand() % cPlayarea.X) + 1;
-		y = (rand() % cPlayarea.Y) + debug ? 2 : 1;
+		y = (rand() % cPlayarea.Y) + (debug ? 2 : 1);
 	} while (snake.pixelIsSnakeBody(x, y) || snake.pixelIsSnakeHead(x, y));
 }
 
